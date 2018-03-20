@@ -179,6 +179,9 @@ def get_distance_by_desired_pod(stability_cat, min_desired_pod, max_desired_pod)
     for distance, prob in sorted(POD_STABILITY_LOOKUP_DICT[stability_cat].iteritems(), reverse=True):
         if prob >= min_desired_pod and prob <= max_desired_pod:
             return distance
+        else:
+            #If no matches, assume 100 meters is detectable
+            return 100
 
 POD_STABILITY_LOOKUP_DICT = {
             'A':{
