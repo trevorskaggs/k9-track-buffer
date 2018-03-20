@@ -15,17 +15,16 @@ def get_wind_dict():
             if windreader.line_num > header_length and row:
                 time = datetime.datetime.strptime(row[0],'%Y-%m-%d %H:%M:%S')
                 #wind_dict[time] = {'speed':row[7], 'dir': row[13]} Valid when complete file
-                wind_dict[time] = {'speed':random.randint(0, 5), 'dir': random.randint(-10, 10)} #Random generation to not change sourcefile
+                wind_dict[time] = {'speed':random.randint(0, 25), 'dir': random.randint(-10, 10)} #Random generation to not change sourcefile
     return wind_dict
 
 def get_wind(point, wind_dict):
     return wind_dict[point.time] if point.time in wind_dict else wind_dict[min(wind_dict.keys(), key=lambda k: abs(k-point.time))]
 
-def get_pair_point(point, wind_dict):
-    wind = get_wind(point, wind_dict)
-    R = 6378.1 #Radius of the Earth
-    bearing = math.radians(wind['dir'])
-    d = wind['speed'] * 0.005000 # Convert windspeed at 1 m/s = 5 Meters
+def get_distance_in_ll(point, distance):
+    R = 6378100 #Radius of the Earth (m)
+    bearing = 90
+    d = distance
     # Put the dog magic here
     lat1 = math.radians(point.latitude) #Current lat point converted to radians
     lon1 = math.radians(point.longitude) #Current long point converted to radians
@@ -33,9 +32,8 @@ def get_pair_point(point, wind_dict):
          math.cos(lat1)*math.sin(d/R)*math.cos(bearing))
     lon2 = lon1 + math.atan2(math.sin(bearing)*math.sin(d/R)*math.cos(lat1),
                  math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
-    lat2 = math.degrees(lat2)
     lon2 = math.degrees(lon2)
-    return gpxpy.gpx.GPXTrackPoint(lat2, lon2, point.elevation, point.time)
+    return abs(lon2 - point.longitude)
 
 def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
     if day_status == 'D':
@@ -62,7 +60,7 @@ def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
                     return 55, 65
                 elif wind >= 14:
                     return 80, 85
-            elif shadow_length <= 8.5:
+            elif shadow_length >= 8.5:
                 if wind < 4:
                     return 10, 30
                 elif wind >= 4 and wind < 7:
@@ -96,7 +94,7 @@ def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
                     return 55, 65
                 elif wind >= 14:
                     return 80, 85
-            elif shadow_length <= 8.5:
+            elif shadow_length >= 8.5:
                 if wind < 4:
                     return 80, 85
                 elif wind >= 4 and wind < 7:
@@ -130,7 +128,7 @@ def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
                     return 80, 85
                 elif wind >= 14:
                     return 80, 85
-            elif shadow_length <= 8.5:
+            elif shadow_length >= 8.5:
                 if wind < 4:
                     return 80, 85
                 elif wind >= 4 and wind < 7:
@@ -162,9 +160,25 @@ def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
                 return 80, 85
 
 
-LOW_PROBABILITY = 25 # and < 50
-MEDIUM_PROBABILITY = 50 # and < 75
-HIGH_PROBABILITY = 80 # and < 100
+def get_stability_category(min_pod, max_pod):
+    average_pod = (min_pod + max_pod) / 2
+    if average_pod < 10:
+        return 'A'
+    elif average_pod >= 10 and average_pod < 40:
+        return 'B'
+    elif average_pod >= 40 and average_pod < 60:
+        return 'C'
+    elif average_pod >= 60 and average_pod < 90:
+        return 'D'
+    elif average_pod >= 90 and average_pod < 95:
+        return 'E'
+    elif average_pod >=95:
+        return 'F'
+
+def get_distance_by_desired_pod(stability_cat, min_desired_pod, max_desired_pod):
+    for distance, prob in sorted(POD_STABILITY_LOOKUP_DICT[stability_cat].iteritems(), reverse=True):
+        if prob >= min_desired_pod and prob <= max_desired_pod:
+            return distance
 
 POD_STABILITY_LOOKUP_DICT = {
             'A':{
