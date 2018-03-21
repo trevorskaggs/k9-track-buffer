@@ -21,20 +21,6 @@ def get_wind_dict():
 def get_wind(point, wind_dict):
     return wind_dict[point.time] if point.time in wind_dict else wind_dict[min(wind_dict.keys(), key=lambda k: abs(k-point.time))]
 
-def get_distance_in_ll(point, distance):
-    R = 6378100 #Radius of the Earth (m)
-    bearing = 90
-    d = distance
-    # Put the dog magic here
-    lat1 = math.radians(point.latitude) #Current lat point converted to radians
-    lon1 = math.radians(point.longitude) #Current long point converted to radians
-    lat2 = math.asin( math.sin(lat1)*math.cos(d/R) +
-         math.cos(lat1)*math.sin(d/R)*math.cos(bearing))
-    lon2 = lon1 + math.atan2(math.sin(bearing)*math.sin(d/R)*math.cos(lat1),
-                 math.cos(d/R)-math.sin(lat1)*math.sin(lat2))
-    lon2 = math.degrees(lon2)
-    return abs(lon2 - point.longitude)
-
 def get_pod_range(day_status, cloud_coverage, shadow_length, wind):
     if day_status == 'D':
         if cloud_coverage == 'C':
@@ -179,9 +165,8 @@ def get_distance_by_desired_pod(stability_cat, min_desired_pod, max_desired_pod)
     for distance, prob in sorted(POD_STABILITY_LOOKUP_DICT[stability_cat].iteritems(), reverse=True):
         if prob >= min_desired_pod and prob <= max_desired_pod:
             return distance
-        else:
-            #If no matches, assume 100 meters is detectable
-            return 100
+    #If no matches, assume 100 meters is detectable
+    return 100
 
 POD_STABILITY_LOOKUP_DICT = {
             'A':{
