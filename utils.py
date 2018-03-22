@@ -161,48 +161,14 @@ def get_stability_category(min_pod, max_pod):
     elif average_pod >=95:
         return 'F'
 
-def get_distance_by_desired_pod(stability_cat, min_desired_pod, max_desired_pod):
-    for distance, prob in sorted(POD_STABILITY_LOOKUP_DICT[stability_cat].iteritems(), reverse=True):
-        if prob >= min_desired_pod and prob <= max_desired_pod:
-            return distance
-    #If no matches, assume 100 meters is detectable
-    return 100
+def get_distance_by_desired_pod(stability_cat, desired_pod):
+    return POD_STABILITY_LOOKUP_DICT['A'](desired_pod)
 
 POD_STABILITY_LOOKUP_DICT = {
-            'A':{
-                100: .13, 
-                50: .56,
-                25: .82,
-                12.5: .92
-            },
-            'B':{
-                100: .22,
-                50: .60,
-                25: .84,
-                12.5: .93
-            },
-            'C':{
-                100: .40,
-                50: .71,
-                25: .91,
-                12.5: .96,
-            },
-            'D':{
-                100: .82,
-                50: .91,
-                25: .97,
-                12.5: .98
-            },
-            'E':{
-                100: .91,
-                50: .96,
-                25: .98,
-                12.5: .99,
-            },
-            'F':{
-                100: .95,
-                50: .97,
-                25: .99,
-                12.5: .99
-            },
+            'A':lambda x: 100 - (x * .9011),
+            'B':lambda x: 100 - (x * .8143),
+            'C':lambda x: 100 - (x * .6072),
+            'D':lambda x: 100 - (x * .1667),
+            'E':lambda x: 100 - (x * .0868),
+            'F':lambda x: 100 - (x * .0668),
         }

@@ -7,7 +7,7 @@ get_stability_category, get_wind, get_wind_dict
 
 file_name = 'example.gpx'
 in_file = 'sample-data/' + file_name
-out_file = 'output-data/' + file_name + '.kml'
+out_file = 'output-data/' + file_name
 
 kml_wrapper = \
 r"""<?xml version="1.0" encoding="UTF-8"?>
@@ -55,9 +55,9 @@ DAY_STATUS = 'D' # Daytime
 CLOUD_COVERAGE = 'C' # Clear
 #SHADOW_LENGTH = 3
 
-LOW_PROBABILITY = [.0, .1]
-MEDIUM_PROBABILITY = [.1, .85]
-HIGH_PROBABILITY = [.85, 1]
+LOW_PROBABILITY = [.25]
+MEDIUM_PROBABILITY = [.50]
+HIGH_PROBABILITY = [.90]
 
 high_pod = ogr.Geometry(ogr.wkbMultiPolygon)
 
@@ -86,9 +86,9 @@ for track in gpx.tracks:
                 if prev_point:
                     pod = get_pod_range(DAY_STATUS, CLOUD_COVERAGE, random.randint(1, 10), get_wind(point, wind_dict)['speed'])
                     stability_cat = get_stability_category(pod[0], pod[1])
-                    high_distance = get_distance_by_desired_pod(stability_cat, HIGH_PROBABILITY[0], HIGH_PROBABILITY[1])
-                    med_distance = get_distance_by_desired_pod(stability_cat, MEDIUM_PROBABILITY[0], MEDIUM_PROBABILITY[1])
-                    low_distance = get_distance_by_desired_pod(stability_cat, LOW_PROBABILITY[0], LOW_PROBABILITY[1])
+                    high_distance = get_distance_by_desired_pod(stability_cat, HIGH_PROBABILITY[0])
+                    med_distance = get_distance_by_desired_pod(stability_cat, MEDIUM_PROBABILITY[0])
+                    low_distance = get_distance_by_desired_pod(stability_cat, LOW_PROBABILITY[0])
                     line = ogr.Geometry(ogr.wkbLineString)
                     line.AddPoint(prev_point.longitude, prev_point.latitude)
                     line.AddPoint(point.longitude, point.latitude)
@@ -103,9 +103,17 @@ for track in gpx.tracks:
                     med_union_geom = med_union_geom.Union(med_buff)
                     low_union_geom = low_union_geom.Union(low_buff)
                 prev_point = point
-geoms = [('highbuff', high_union_geom), ('medbuff', med_union_geom.Difference(high_union_geom)), ('lowbuff', low_union_geom.Difference(med_union_geom).Difference(high_union_geom))]
-with open(out_file, 'wb') as outfile:
+
+geoms = [('highbuff', high_union_geom), ('medbuff', med_union_geom), ('lowbuff', low_union_geom)]
+with open(out_file + 'kml', 'wb') as outfile:
     feat_out = ''
     for feat in geoms:
+        feat_out += feat_wrapper % (feat[0], feat[0], feat[0], feat[1].ExportToKML())
+    outfile.write(kml_wrapper % feat_out)
+
+diff_geoms = [('highbuff', high_union_geom), ('medbuff', med_union_geom.Difference(high_union_geom)), ('lowbuff', low_union_geom.Difference(med_union_geom))]
+with open(out_file + '-diff.kml', 'wb') as outfile:
+    feat_out = ''
+    for feat in diff_geoms:
         feat_out += feat_wrapper % (feat[0], feat[0], feat[0], feat[1].ExportToKML())
     outfile.write(kml_wrapper % feat_out)
